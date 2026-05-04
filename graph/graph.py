@@ -1,6 +1,5 @@
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
-from IPython.display import Image,display
 
 from graph.nodes import (
     background_node,

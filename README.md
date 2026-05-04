@@ -52,6 +52,227 @@ DoOver，愿做你青春回忆录里的最后一章。
 让你知道，现在的你，比任何时候都更懂得如何去爱。
 
 
+## 🚀 快速开始
+
+### 环境要求
+
+- Python 3.10+
+- Node.js 18+
+- npm 或 yarn
+
+### 安装步骤
+
+#### 1. 克隆项目
+
+```bash
+git clone https://github.com/Radiant303/DoOver.git
+cd DoOver
+```
+
+#### 2. 安装后端依赖
+
+```bash
+pip install -r requirements.txt
+```
+
+#### 3. 安装前端依赖
+
+```bash
+cd dashboard
+npm install
+cd ..
+```
+
+#### 4. 配置 LLM 服务
+
+复制配置文件并填写你的 API 密钥：
+
+```bash
+cp llm/config/provider.json.example llm/config/provider.json
+cp tools/config/tools.example tools/config/tools.json
+```
+
+编辑 `llm/config/provider.json`：
+
+```json
+{
+  "active_llm_provider": "your-provider",
+  "active_llm_model": "your-model",
+  "llm_providers": {
+    "your-provider": {
+      "type": "openai",
+      "base_url": "https://api.example.com/v1",
+      "api_key": "your-api-key",
+      "models": ["your-model"]
+    }
+  }
+}
+```
+
+支持的 LLM 类型：
+- `openai` - OpenAI API 兼容接口
+- `moonshot` - 月之暗面 (Kimi)
+- `stepfun` - 阶跃函数
+
+### 启动服务
+
+#### 方式一：使用测试脚本（推荐）
+
+```bash
+python test.py
+```
+
+#### 方式二：手动启动
+
+**启动后端：**
+```bash
+uvicorn test:app --host 0.0.0.0 --port 8000
+```
+
+**启动前端：**
+```bash
+cd dashboard
+npm run dev
+```
+
+### 访问应用
+
+打开浏览器访问：http://localhost:5173
+
+---
+
+## 📖 使用教程
+
+### 基本流程
+
+1. **输入你的故事** - 在对话框中输入你想要重新体验的回忆或遗憾
+
+2. **分析背景** - 系统会分析你的故事，提取关键人物、时间和地点
+
+3. **选择转折点** - 系统会生成 3-5 个关键转折点供你选择
+
+4. **角色扮演互动** - 根据你的选择，与相关角色进行对话
+
+5. **获得感悟** - 系统会给出故事的结局和人生感悟
+
+### 示例场景
+
+**场景：青春遗憾**
+
+```
+用户："那年夏天，我鼓起勇气想向她表白，但最终还是退缩了。"
+
+系统：分析背景 → 生成转折点
+  1. 在那个瞬间，你决定鼓起勇气表白
+  2. 你决定等到毕业再说
+  3. 你假装什么都没发生
+
+用户选择："在那个瞬间，你决定鼓起勇气表白"
+
+系统：创建角色"她"
+她："谢谢你告诉我，其实我也一直喜欢你..."
+
+用户："那我们现在还能在一起吗？"
+
+她："时间会给我们答案，但至少现在，我们都没有遗憾了。"
+```
+
+### 功能特性
+
+- ✅ **会话持久化** - 页面刷新后自动恢复之前的对话状态
+- ✅ **多重转折点** - 每个故事都有多种可能的发展方向
+- ✅ **角色扮演** - 与故事中的角色进行真实对话
+- ✅ **情感分析** - 理解故事中的情感基调
+- ✅ **重置会话** - 随时可以重新开始新的故事
+
+---
+
+## 📁 项目结构
+
+```
+DoOver/
+├── dashboard/          # 前端 Vue 应用
+│   ├── src/
+│   │   ├── components/  # Vue 组件
+│   │   ├── composables/ # 组合式函数
+│   │   ├── views/       # 页面视图
+│   │   └── router/      # 路由配置
+│   └── package.json
+├── graph/              # LangGraph 工作流
+│   ├── graph.py        # 图定义
+│   ├── nodes.py        # 节点逻辑
+│   ├── state.py        # 状态管理
+│   └── prompts.py      # 提示词模板
+├── llm/                # LLM 客户端
+│   ├── client.py       # LLM 客户端
+│   ├── provider/       # LLM 提供商
+│   └── config/         # LLM 配置
+├── tools/              # 工具模块
+│   ├── search.py       # 搜索工具
+│   └── config/         # 工具配置
+├── utils/              # 通用工具
+│   ├── websocket.py    # WebSocket 服务
+│   └── session.py      # 会话管理
+├── test.py             # 主入口（FastAPI）
+└── requirements.txt    # Python 依赖
+```
+
+---
+
+## 🔧 配置说明
+
+### LLM 配置 (`llm/config/provider.json`)
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `active_llm_provider` | 当前激活的提供商 | `openai` |
+| `active_llm_model` | 当前使用的模型 | `gpt-4o-mini` |
+| `llm_providers.*.type` | 提供商类型 | `openai`, `moonshot`, `stepfun` |
+| `llm_providers.*.base_url` | API 地址 | `https://api.example.com/v1` |
+| `llm_providers.*.api_key` | API 密钥 | `sk-xxx` |
+| `llm_providers.*.models` | 可用模型列表 | `["model-a", "model-b"]` |
+
+### 搜索工具配置 (`tools/config/tools.json`)
+
+| 参数 | 说明 |
+|------|------|
+| `search.active_search_provider` | 激活的搜索提供商 |
+| `search.baidu.api_key` | 百度搜索 API 密钥 |
+| `search.tavily.api_key` | Tavily 搜索 API 密钥 |
+
+---
+
+## 🤝 贡献指南
+
+欢迎贡献代码！请遵循以下步骤：
+
+1. Fork 本项目
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 创建 Pull Request
+
+---
+
+## 📝 常见问题
+
+### Q: 页面刷新后会话丢失怎么办？
+
+A: 不用担心！我们已经实现了会话持久化功能。页面刷新后，所有对话状态会自动从浏览器本地存储中恢复。
+
+### Q: 如何重置会话？
+
+A: 点击左侧面板的"🔄"重置按钮即可清空当前会话，开始新的故事。
+
+### Q: 支持哪些 LLM 服务？
+
+A: 当前支持 OpenAI 兼容接口、月之暗面 (Kimi)、阶跃函数等服务。
+
+### Q: 如何配置多个 LLM 提供商？
+
+A: 在 `llm/config/provider.json` 中添加多个提供商配置，然后通过前端设置页面切换。
+
+---
 
 ## ⭐ Star History
 

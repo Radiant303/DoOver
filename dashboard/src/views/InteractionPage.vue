@@ -7,9 +7,20 @@
             <div class="lane-kicker">Flow</div>
             <h2 class="lane-title">节点</h2>
           </div>
-          <span class="status-pill" :class="{ online: isConnected }">
-            {{ isConnected ? "WS 已连接" : "WS 未连接" }}
-          </span>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button
+              v-if="nodeMessages.length > 0"
+              type="button"
+              class="reset-btn"
+              @click="handleReset"
+              title="重置会话"
+            >
+              🔄
+            </button>
+            <span class="status-pill" :class="{ online: isConnected }">
+              {{ isConnected ? "WS 已连接" : "WS 未连接" }}
+            </span>
+          </div>
         </header>
 
         <div class="lane-body node-list">
@@ -187,7 +198,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch, onMounted } from "vue";
 import { useDooverWs } from "../composables/useDooverWs";
 import NodeComponent from "../components/NodeComponent.vue";
 import LetterComponent from "../components/LetterComponent.vue";
@@ -293,7 +304,51 @@ const {
   sendUserAnswer,
   sendUserChoice,
   sendRoleReply,
+  resetSession,
+  restoreState,
+  hasSavedState,
 } = useDooverWs();
+
+const handleReset = () => {
+  if (confirm("确定要重置会话吗？所有历史记录将被清空。")) {
+    closeDialog();
+    resetSession();
+    experienceDialogVisible.value = true;
+  }
+};
+
+// 组件挂载时恢复状态
+onMounted(() => {
+  restoreState();
+});
+
+// 监听恢复的 pendingQuestion 并显示对话框
+watch(pendingQuestion, (val) => {
+  if (val) {
+    // pendingQuestion 已经包含数据，组件会自动显示对话框
+  }
+});
+
+// 监听恢复的 pendingChoices 并显示对话框
+watch(pendingChoices, (val) => {
+  if (val && val.length > 0) {
+    choiceDialogVisible.value = true;
+  }
+});
+
+// 监听恢复的 pendingRole 并显示对话框
+watch(pendingRole, (val) => {
+  if (val) {
+    // pendingRole 已经包含数据，组件会自动显示对话框
+  }
+});
+
+// 只有在没有保存状态时才显示初始输入对话框
+watch(hasSavedState, (val) => {
+  if (val && nodeMessages.value.length > 0) {
+    experienceDialogVisible.value = false;
+  }
+});
 
 const choiceItems = computed(() => {
   if (Array.isArray(pendingChoices.value)) return pendingChoices.value;
@@ -687,6 +742,25 @@ onBeforeUnmount(() => {
 
 .status-pill.subtle {
   background: transparent;
+}
+
+.reset-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(127, 116, 95, 0.18);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reset-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: rotate(180deg);
 }
 
 .send-btn {

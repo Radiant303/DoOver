@@ -1,18 +1,76 @@
 // src/composables/useDooverWs.ts
-import { onBeforeUnmount, ref } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 
 const WS_BASE_URL = 'ws://localhost:8000/ws'
 const RECONNECT_INTERVAL_MS = 3000
 const TEXT_CHUNK_BOUNDARY = /(?=node:|background_node_msg:|continue_next_msg:|role_node_msg:|Search_Result:)/g
 const SEARCH_NODE_KEY = 'search_node'
 const SEARCH_RESULT_PREFIXES = ['Search_Result:'] as const
+const STORAGE_KEY = 'doover_session_state'
+const STORAGE_KEY_SESSION_ID = 'doover_session_id'
 
 function getOrCreateSessionId() {
-    return crypto.randomUUID()
+    const saved = localStorage.getItem(STORAGE_KEY_SESSION_ID)
+    if (saved) {
+        return saved
+    }
+    const newId = crypto.randomUUID()
+    localStorage.setItem(STORAGE_KEY_SESSION_ID, newId)
+    return newId
+}
+
+interface SavedState {
+    sessionId: string
+    nodeMessages: string[]
+    roleMessages: Array<{ roleName: string; text: string }>
+    backgroundText: string
+    continueText: string
+    searchContent: string
+    pendingQuestion: null | { field: string; question: string }
+    pendingRole: null | { field: string; role_name: string; question: string }
+    pendingChoiceField: string
+    pendingChoices: any[]
+    timestamp: number
+}
+
+function saveState(state: Omit<SavedState, 'timestamp'>) {
+    try {
+        const data: SavedState = {
+            ...state,
+            timestamp: Date.now()
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+    } catch (e) {
+        console.warn('Failed to save state:', e)
+    }
+}
+
+function loadState(): SavedState | null {
+    try {
+        const data = localStorage.getItem(STORAGE_KEY)
+        if (!data) return null
+        return JSON.parse(data)
+    } catch (e) {
+        console.warn('Failed to load state:', e)
+        return null
+    }
+}
+
+function clearState() {
+    try {
+        localStorage.removeItem(STORAGE_KEY)
+        const newId = crypto.randomUUID()
+        localStorage.setItem(STORAGE_KEY_SESSION_ID, newId)
+        return newId
+    } catch (e) {
+        console.warn('Failed to clear state:', e)
+        return crypto.randomUUID()
+    }
 }
 
 export function useDooverWs() {
-    const sessionId = getOrCreateSessionId()
+    const savedSessionId = getOrCreateSessionId()
+    const sessionId = ref(savedSessionId)
     const isConnected = ref(false)
 
     const pendingQuestion = ref<null | { field: string; question: string }>(null)
@@ -25,10 +83,48 @@ export function useDooverWs() {
     const backgroundText = ref('')
     const continueText = ref('')
     const searchContent = ref('')
+    const hasSavedState = ref(false)
 
     let ws: WebSocket | null = null
     let reconnectTimer: number | null = null
     let allowReconnect = true
+
+    // 恢复状态 - 供组件在 onMounted 中调用
+    function restoreState() {
+        const saved = loadState()
+        if (saved && saved.sessionId === sessionId.value) {
+            nodeMessages.value = saved.nodeMessages || []
+            roleMessages.value = saved.roleMessages || []
+            backgroundText.value = saved.backgroundText || ''
+            continueText.value = saved.continueText || ''
+            searchContent.value = saved.searchContent || ''
+            pendingQuestion.value = saved.pendingQuestion || null
+            pendingRole.value = saved.pendingRole || null
+            pendingChoiceField.value = saved.pendingChoiceField || 'choose'
+            pendingChoices.value = saved.pendingChoices || []
+            hasSavedState.value = true
+        }
+    }
+
+    // 自动保存状态
+    watch(
+        [nodeMessages, roleMessages, backgroundText, continueText, searchContent, pendingQuestion, pendingRole, pendingChoiceField, pendingChoices],
+        () => {
+            saveState({
+                sessionId: sessionId.value,
+                nodeMessages: nodeMessages.value,
+                roleMessages: roleMessages.value,
+                backgroundText: backgroundText.value,
+                continueText: continueText.value,
+                searchContent: searchContent.value,
+                pendingQuestion: pendingQuestion.value,
+                pendingRole: pendingRole.value,
+                pendingChoiceField: pendingChoiceField.value,
+                pendingChoices: pendingChoices.value,
+            })
+        },
+        { deep: true }
+    )
 
     function clearReconnectTimer() {
         if (reconnectTimer !== null) {
@@ -196,13 +292,34 @@ export function useDooverWs() {
         }
     }
 
+    function resetSession() {
+        const newId = clearState()
+        sessionId.value = newId
+        nodeMessages.value = []
+        roleMessages.value = []
+        backgroundText.value = ''
+        continueText.value = ''
+        searchContent.value = ''
+        pendingQuestion.value = null
+        pendingRole.value = null
+        pendingChoiceField.value = 'choose'
+        pendingChoices.value = []
+        hasSavedState.value = false
+        
+        if (ws) {
+            ws.close()
+            ws = null
+        }
+        connect()
+    }
+
     function connect() {
         if (!allowReconnect) return
         if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
             return
         }
 
-        const socket = new WebSocket(`${WS_BASE_URL}?session_id=${sessionId}`)
+        const socket = new WebSocket(`${WS_BASE_URL}?session_id=${sessionId.value}`)
         ws = socket
 
         socket.onopen = () => {
@@ -257,7 +374,8 @@ export function useDooverWs() {
     })
 
     return {
-        sessionId,
+        sessionId: sessionId.value,
+        sessionIdRef: sessionId,
         isConnected,
         pendingQuestion,
         pendingRole,
@@ -268,10 +386,13 @@ export function useDooverWs() {
         backgroundText,
         continueText,
         searchContent,
+        hasSavedState,
         send,
         sendUserInput,
         sendUserAnswer,
         sendUserChoice,
         sendRoleReply,
+        resetSession,
+        restoreState,
     }
 }
