@@ -1,5 +1,6 @@
 # Core Dependencies
 langgraph>=0.2.0
+langchain
 langchain-core>=0.3.0
 langchain-openai>=0.2.0
 
@@ -21,3 +22,4 @@ python-dotenv>=1.0.0
 
 # Optional: For visualization
 # IPython>=8.0.0
+ipython

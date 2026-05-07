@@ -951,3 +951,4 @@ async def delete_llm_model(
 
 if __name__ == "__main__":
     uvicorn.run("test:app", host="0.0.0.0", port=8000, reload=False)
+    # 使用uv命令运行：uv test:app --host
